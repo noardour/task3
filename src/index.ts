@@ -1,34 +1,60 @@
-import validate from "./validate";
 import readline from "readline-sync";
-import crypto from "crypto";
-import checkWin from "./checkWin";
 import Printer from "./Printer";
+import Validator from "./Validator";
+import Crypto from "./Crypto";
+import Rules from "./Rules";
+import Player from "./Player";
+import Controll from "./Controll";
 
 const moves: string[] = process.argv.slice(2);
-validate(moves);
 
 const printer = new Printer();
+const validator = new Validator(moves);
 
-const key = crypto.randomBytes(32);
-
-printer.printCommands(moves);
-
-while (true) {
-  const AIMove = Math.round(Math.random() * (moves.length - 1));
-  const hmac = crypto.createHmac("sha3-256", key).update(moves[AIMove]);
-
-  printer.printHMAC(hmac.digest("hex"));
-
-  const PlayerCommand = readline.question("Your move: ");
-  if (PlayerCommand == "0") break;
-  if (PlayerCommand == "?") {
-    printer.printMovesTable(moves);
-    continue;
-  }
-  const playerMove = parseInt(PlayerCommand) - 1;
-
-  printer.printChoosedMoves(moves[playerMove], moves[AIMove]);
-  printer.printOutcome(checkWin(playerMove, AIMove, moves.length));
+const errors = validator.isOdd().isUnique().isNotEmpty().getErrors();
+if (errors) {
+  printer.printErrors(errors);
+  process.exit();
 }
 
-printer.printKey(key.toString("hex"));
+const rules = new Rules(moves);
+const crypto = new Crypto();
+const controll = new Controll(rules.getMoves());
+
+printer.printCommands(controll);
+
+let exit = false;
+while (true) {
+  const HumanPlayer = new Player(rules);
+  const AIPlayer = new Player(rules);
+
+  crypto.generateKey();
+
+  AIPlayer.move =
+    rules.getMoves()[Math.floor(Math.random() * rules.getMovesCount())];
+  crypto.generateHMAC(AIPlayer.move);
+
+  printer.printHMAC(crypto.getHMAC());
+
+  /* controll.onHelp(() => printer.printMovesTable(moves)); */
+  controll.onExit(() => {
+    exit = true;
+  });
+  controll.onMove((move) => (HumanPlayer.move = move));
+
+  while (!HumanPlayer.move && !exit) controll.getInput();
+  if (exit) break;
+
+  printer.printChoosedMoves(
+    HumanPlayer.move as string,
+    AIPlayer.move as string
+  );
+
+  const winner = rules.getWinner(HumanPlayer, AIPlayer);
+  if (winner == HumanPlayer) printer.printWin();
+  else if (winner == AIPlayer) printer.printLoose();
+  else if (!winner) printer.printDraw();
+
+  printer.printKey(crypto.getKey());
+  console.log("");
+}

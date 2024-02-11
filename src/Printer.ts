@@ -1,13 +1,10 @@
 import Table from "cli-table3";
-import checkWin from "./checkWin";
+import Controll from "./Controll";
+import Rules from "./Rules";
 
 export default class Printer {
-  printCommands(moves: string[]): void {
-    let str = "Avalible moves:\n";
-    moves.forEach((move, i) => (str += `${i + 1} - ${move}\n`));
-    str += "0 - exit\n";
-    str += "? - help";
-    console.log(str);
+  printCommands(controll: Controll): void {
+    console.log(controll.getCommands().join("\n"));
   }
 
   printHMAC(hmac: string): void {
@@ -19,20 +16,23 @@ export default class Printer {
     console.log(`Computer move: ${AIMove}`);
   }
 
-  printOutcome(tag: string): void {
-    const outcome = {
-      loose: "You loose!",
-      draw: "It' a draw!",
-      win: "You win!",
-    }[tag];
-    console.log(outcome + "\n");
+  printWin(): void {
+    console.log("You win!");
+  }
+
+  printLoose(): void {
+    console.log("You loose!");
+  }
+
+  printDraw(): void {
+    console.log("It' a draw!");
   }
 
   printKey(key: string): void {
     console.log(`HMAC key is ${key}`);
   }
 
-  printMovesTable(moves: string[]) {
+  /* printMovesTable(rules: Rules[]) {
     const table = new Table({
       head: ["↓PC/Player→", ...moves],
     });
@@ -43,5 +43,10 @@ export default class Printer {
       ])
     );
     console.log(table.toString());
+  } */
+
+  printErrors(errors: string[]) {
+    errors[0] = errors[0][0].toUpperCase() + errors[0].slice(1);
+    console.log(`Error${errors.length > 1 ? "s" : ""}: ${errors.join(", ")}.`);
   }
 }
